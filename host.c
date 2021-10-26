@@ -37,11 +37,11 @@ int main(int argc, char *argv[]) {
 
     switch (argc) {
         case 4:
-            strcpy(ack_addr,argv[3]);
+            strcpy(ack_addr, argv[3]);
         case 3:
-            strcpy(rx_addr,argv[2]);
+            strcpy(rx_addr, argv[2]);
         case 2:
-            strcpy(tx_addr,argv[1]);
+            strcpy(tx_addr, argv[1]);
         default:
             break;
     }
@@ -168,10 +168,20 @@ static void analysis(char *data, int datal, client_list_node_t node_t) {
     //一般情况下这里都是处理“粘包”的地方
 
     //解决粘包之后 将完整的数据发送给数据处理函数
-
-    if (client_list[1].is_run == 1) send(client_list[1].socket_client, data, datal, 0);
-    if (client_list[2].is_run == 1) send(client_list[2].socket_client, data, datal, 0);
-    if (client_list[0].is_run == 1) send(client_list[0].socket_client, data, datal, 0);
+    if (strcmp(data, "rx stop") == 0) {
+        if (client_list[2].is_run == 1)
+            send(client_list[2].socket_client, data, datal, 0); //rx
+        if (client_list[0].is_run == 1)
+            send(client_list[0].socket_client, "ack start", strlen("ack start"), 0); //ack
+    } else if (strcmp(data, "ack stop") == 0) {
+        if (client_list[0].is_run == 1)
+            send(client_list[0].socket_client, data, datal, 0); //ack
+    } else {
+        if (client_list[1].is_run == 1)
+            send(client_list[1].socket_client, data, datal, 0); //tx
+        if (client_list[2].is_run == 1)
+            send(client_list[2].socket_client, data, datal, 0); //rx
+    }
 }
 
 

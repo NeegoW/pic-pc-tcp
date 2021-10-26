@@ -195,7 +195,7 @@ int run_tx(char *param) {
     si.cb = sizeof(si);
     memset(&pi, 0, sizeof(PROCESS_INFORMATION));
 
-    send(socket_client, "stop", strlen("stop"), 0);
+    send(socket_client, "rx stop", strlen("stop"), 0);
 
     process_is_run = 0;
     return 0;

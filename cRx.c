@@ -86,8 +86,9 @@ int main(int argc, char **argv) {
 static void analysis(char *data, int datal) {
     printf("recv data:%s\tdatal:%d\n", data, datal);
 
-    if (strcmp(data, "stop") == 0) {
+    if (strcmp(data, "rx stop") == 0) {
         send_sigint();
+        send(socket_client, "ack start", strlen("ack start"), 0);
     } else {
         run_rx(data);
     }
