@@ -4,25 +4,25 @@
 #include <io.h>
 #include <windows.h>
 
-int log_set_name(char *fName, char *type, char *freq);
+int log_set_name(char *fName, char *freq, char *distance);
 
 void log_w(char *fName, unsigned char *arr, long size);
 
-int log_set_name(char *fName, char *type, char *freq) {
+int log_set_name(char *fName, char *freq, char *distance) {
     char parentDir[128] = "";
 
     // initial parentDir
     strcat(parentDir, fName); // cat baseDir
     if (access(parentDir, 0) == -1) mkdir(parentDir);
-    sprintf(parentDir, "%s%s\\", parentDir, freq);// cat frequency
+    sprintf(parentDir, "%s\\%s\\", parentDir, freq);// cat frequency
     if (access(parentDir, 0) == -1) mkdir(parentDir);
     time_t timep;
     struct tm *pTm;
     time(&timep);
     pTm = gmtime(&timep);
-    sprintf(parentDir, "%s%d%02d%02d\\", parentDir, 1900 + pTm->tm_year, 1 + pTm->tm_mon, pTm->tm_mday);// cat nowDate
+    sprintf(parentDir, "%s%s\\", parentDir, distance);// cat distance
     if (access(parentDir, 0) == -1) mkdir(parentDir);
-    sprintf(parentDir, "%s%s\\", parentDir, type);// cat type
+    sprintf(parentDir, "%s%d%02d%02d\\", parentDir, 1900 + pTm->tm_year, 1 + pTm->tm_mon, pTm->tm_mday);// cat nowDate
     if (access(parentDir, 0) == -1) mkdir(parentDir);
 
     // find the last id of the fileName
@@ -42,7 +42,7 @@ int log_set_name(char *fName, char *type, char *freq) {
         id++;
     }
 
-    sprintf(fName, "%s%08d%s", parentDir, id, fSuffix);
+    sprintf(fName, "%s%09d%s", parentDir, id, fSuffix);
     return 0;
 }
 

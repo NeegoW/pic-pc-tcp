@@ -5,7 +5,6 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
-#define HOST_ADDR "192.168.58.1"
 #define DEF_PORT 10086
 
 static SOCKET socket_client;         //本地创建的客户端socket
@@ -22,11 +21,20 @@ DWORD WINAPI rec_thread();
 
 DWORD WINAPI send_thread();
 
-int run_tx(char *param);
+int run_ack(char *param);
 
 void send_sigint();
 
 int main(int argc, char **argv) {
+    char host_addr[16];
+
+    switch (argc) {
+        case 2:
+            strcpy(host_addr, argv[1]);
+        default:
+            break;
+    }
+
     WORD socket_version;
     WSADATA wsadata;
     socket_version = MAKEWORD(2, 2);
@@ -45,7 +53,7 @@ int main(int argc, char **argv) {
 
     server_in.sin_family = AF_INET;    //IPV4协议族
     server_in.sin_port = htons(DEF_PORT);  //服务器的端口号
-    server_in.sin_addr.S_un.S_addr = inet_addr(HOST_ADDR); //服务IP
+    server_in.sin_addr.S_un.S_addr = inet_addr(host_addr); //服务IP
     if (connect(socket_client, (struct sockaddr *) &server_in, sizeof(server_in)) == SOCKET_ERROR) {
         printf("connect error\n");
         system("pause");
@@ -55,9 +63,9 @@ int main(int argc, char **argv) {
     is_connect = 1;
     printf("connect %s:%d\n", inet_ntoa(server_in.sin_addr), server_in.sin_port);
 
-    memset(&si, 0, sizeof(STARTUPINFO));
+    memset(&si, 0, sizeof(si));
     si.cb = sizeof(si);
-    memset(&pi, 0, sizeof(PROCESS_INFORMATION));
+    memset(&pi, 0, sizeof(pi));
 
     _beginthreadex(
             NULL,
@@ -76,12 +84,12 @@ int main(int argc, char **argv) {
 }
 
 static void analysis(char *data, int datal) {
-    printf("recv data:%s\ndatal:%d\n", data, datal);
+    printf("recv data:%s\tdatal:%d\n", data, datal);
 
     if (strcmp(data, "stop") == 0) {
         send_sigint();
     } else {
-        run_tx(data);
+        run_ack(data);
     }
 }
 
@@ -112,8 +120,8 @@ DWORD WINAPI rec_thread() {
     _endthreadex(0);
 }
 
-int run_tx(char *param) {
-    char cmdLine[256] = "c3.exe ";
+int run_ack(char *param) {
+    char cmdLine[256] = "rx.exe ";
     strcat(cmdLine, param);
 
     // Start the child process.
@@ -127,15 +135,14 @@ int run_tx(char *param) {
                        NULL,           // Use parent's starting directory
                        &si,            // Pointer to STARTUPINFO structure
                        &pi)           // Pointer to PROCESS_INFORMATION structure
-                       ) {
+            ) {
         printf("CreateProcess failed (%lu).\n", GetLastError());
         return -1;
     }
-    CloseHandle(pi.hThread);
-
     process_is_run = 1;
     puts("process running...");
 
+    CloseHandle(pi.hThread);
     return 0;
 }
 

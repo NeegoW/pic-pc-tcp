@@ -3,9 +3,6 @@
 #include <windows.h>
 #include <process.h>
 
-#define TX_ADDR "192.168.58.1"
-#define RX_ADDR "192.168.58.128"
-#define ACK_ADDR "192.168.1.4"
 #define MAX_CLIENT_NUMS 9
 #define DEF_PORT 10086
 
@@ -34,6 +31,21 @@ static void analysis(char *data, int datal, client_list_node_t node_t);
 DWORD WINAPI myfun1(LPVOID lpParameter);
 
 int main(int argc, char *argv[]) {
+    char tx_addr[16];
+    char rx_addr[16];
+    char ack_addr[16];
+
+    switch (argc) {
+        case 4:
+            strcpy(ack_addr,argv[3]);
+        case 3:
+            strcpy(rx_addr,argv[2]);
+        case 2:
+            strcpy(tx_addr,argv[1]);
+        default:
+            break;
+    }
+
     WORD socket_version = MAKEWORD(2, 2);
     WSADATA wsadata;
     if (WSAStartup(socket_version, &wsadata) != 0) {
@@ -95,9 +107,9 @@ int main(int argc, char *argv[]) {
                 continue;
             } else {
                 int j;
-                if (strcmp(inet_ntoa(c_sin.sin_addr), TX_ADDR) == 0) j = 0;
-                else if (strcmp(inet_ntoa(c_sin.sin_addr), RX_ADDR) == 0) j = 1;
-                else if (strcmp(inet_ntoa(c_sin.sin_addr), ACK_ADDR) == 0) j = 2;
+                if (strcmp(inet_ntoa(c_sin.sin_addr), tx_addr) == 0) j = 0;
+                else if (strcmp(inet_ntoa(c_sin.sin_addr), rx_addr) == 0) j = 1;
+                else if (strcmp(inet_ntoa(c_sin.sin_addr), ack_addr) == 0) j = 2;
                 else {
                     char *msg = "disconnected due to wrong addr\n";
                     send(socket_of_client, msg, strlen(msg), 0);

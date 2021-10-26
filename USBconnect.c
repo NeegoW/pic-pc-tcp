@@ -1,58 +1,57 @@
 //////////////////////////////////////////////////////////////////////////////////
-// USB HID �֐��Q
+// USB HID 関数群
 //
 
 //////////////////////////////////////////////////////////////////////////////////
-// USB�ڑ��J�n
+// USB接続開始
 #include "USBconnect.h"
 
 BOOL USBConnect(USB *usb) {
     GUID hidGuid;
     HDEVINFO hDevInfo;
 
-    // HID.DLL�̌Ăяo�� & �֐��̃A�h���X�擾
+    // HID.DLLの呼び出し & 関数のアドレス取得
     if (!myLoadLibrary(usb)) {
-        usb->message = "DLL ���[�h���s";
+        usb->message = "DLL ロード失敗";
         return FALSE;
     }
 
-    // HID�f�o�C�X��GUID�R�[�h���擾
+    // HIDデバイスのGUIDコードを取得
     HidD_GetHidGuid(&hidGuid);
 
-    // HID�N���X�̃f�o�C�X���X�g�ւ̃n���h�����擾
-    hDevInfo = mySetupDiGetClassDevs(usb,
-                                     hidGuid);                                // HID�N���X�̃f�o�C�X���X�g�ւ̃n���h�����擾
+    // HIDクラスのデバイスリストへのハンドルを取得
+    hDevInfo = mySetupDiGetClassDevs(usb, hidGuid);                                // HIDクラスのデバイスリストへのハンドルを取得
     if (!hDevInfo) {
         FreeLibrary(usb->hModule);
-        usb->message = "�f�o�C�X���X�g�n���h�� �擾���s";
+        usb->message = "デバイスリストハンドル 取得失敗";
         return FALSE;
     }
 
-    // �Ώۃf�o�C�X����
+    // 対象デバイス検索
     if (SearchDevice(usb, hidGuid, hDevInfo)) {
-        // HID�f�B�o�C�X�\�͎擾
+        // HIDディバイス能力取得
         GetBufferSize(usb);
         return TRUE;
     } else {
-        usb->message = "�f�o�C�X �ڑ����s";
+        usb->message = "デバイス 接続失敗";
         return FALSE;
     }
 }
 
 
 //////////////////////////////////////////////////////////////////////////////////
-// ����M�p �������m��
+// 送受信用 メモリ確保
 
 BOOL USBmemset(USB *usb) {
     usb->SendBuf = malloc(usb->OutputReportByteLength);
     if (usb->SendBuf == NULL) {
-        usb->message = "���������m�ۂł��܂���ł����D";
+        usb->message = "メモリが確保できませんでした．";
         return FALSE;
     }
 
     usb->RecvBuf = malloc(usb->InputReportByteLength);
     if (usb->RecvBuf == NULL) {
-        usb->message = "���������m�ۂł��܂���ł����D";
+        usb->message = "メモリが確保できませんでした．";
         return FALSE;
     }
 
@@ -61,7 +60,7 @@ BOOL USBmemset(USB *usb) {
 
 
 //////////////////////////////////////////////////////////////////////////////////
-// ����
+// 送受
 
 DWORD USBRead(USB *usb) {
     DWORD dwSize;
@@ -73,7 +72,7 @@ DWORD USBRead(USB *usb) {
 
 
 //////////////////////////////////////////////////////////////////////////////////
-// ���M
+// 送信
 
 void USBWrite(USB usb) {
     DWORD dwSize;
@@ -83,34 +82,34 @@ void USBWrite(USB usb) {
 
 
 //////////////////////////////////////////////////////////////////////////////////
-// USB�ڑ��I��
+// USB接続終了
 
 void USBDisConnect(USB usb) {
-    free(usb.SendBuf);                                                            // �������J��
+    free(usb.SendBuf);                                                            // メモリ開放
     free(usb.RecvBuf);
 
     if (usb.hDevHandle != NULL) {
-        CloseHandle(usb.hDevHandle);                                            // �n���h�������
+        CloseHandle(usb.hDevHandle);                                            // ハンドルを閉じる
     }
 
     if (usb.hModule != NULL) {
-        FreeLibrary(usb.hModule);                                                // HID.DLL�J��
+        FreeLibrary(usb.hModule);                                                // HID.DLL開放
     }
 }
 
 
 //////////////////////////////////////////////////////////////////////////////////
-// HID.DLL�̌Ăяo�� & �֐��̃A�h���X�擾
+// HID.DLLの呼び出し & 関数のアドレス取得
 
 BOOL myLoadLibrary(USB *usb) {
-    /* HID.dll �̌Ăяo�� */
+    /* HID.dll の呼び出し */
     usb->hModule = LoadLibrary("HID.DLL");
     if (usb->hModule == NULL) {
-        usb->message = "HID.DLL��������܂���ł����D";
+        usb->message = "HID.DLLが見つかりませんでした．";
         return FALSE;
     }
 
-    /* DLL�̊֐��̃A�h���X���擾 */
+    /* DLLの関数のアドレスを取得 */
     HidD_GetHidGuid = (HIDD_GETHIDGUID *) GetProcAddress(usb->hModule, "HidD_GetHidGuid");
     HidD_GetAttributes = (HIDD_GETATTRIBUTES *) GetProcAddress(usb->hModule, "HidD_GetAttributes");
     HidP_GetCaps = (HIDP_GETCAPS *) GetProcAddress(usb->hModule, "HidP_GetCaps");
@@ -118,7 +117,7 @@ BOOL myLoadLibrary(USB *usb) {
 
     if (HidD_GetHidGuid == NULL || HidD_GetAttributes == NULL || HidP_GetCaps == NULL ||
         HidD_GetPreparsedData == NULL) {
-        usb->message = "�֐��̌Ăяo���Ɏ��s���܂����D";
+        usb->message = "関数の呼び出しに失敗しました．";
         FreeLibrary(usb->hModule);
         return FALSE;
     }
@@ -128,22 +127,22 @@ BOOL myLoadLibrary(USB *usb) {
 
 
 //////////////////////////////////////////////////////////////////////////////
-// HID�N���X�̃f�o�C�X���X�g�ւ̃n���h�����擾
+// HIDクラスのデバイスリストへのハンドルを取得
 
 HDEVINFO mySetupDiGetClassDevs(USB *usb, GUID HidGuid) {
     HDEVINFO hDevInfo;
 
     hDevInfo = SetupDiGetClassDevs(
-            &HidGuid,                                                            // �C���^�[�t�F�C�X�N���X�̃N���XGUID�ւ̃|�C���^
-            NULL,                                                                // NULL:���ׂẴf�o�C�X�C���X�^���X�Ɋւ���f�o�C�X�����擾
-            NULL,                                                                // �g�b�v���x���E�B���h�E�̃n���h�����w��
+            &HidGuid,                                                            // インターフェイスクラスのクラスGUIDへのポインタ
+            NULL,                                                                // NULL:すべてのデバイスインスタンスに関するデバイス情報を取得
+            NULL,                                                                // トップレベルウィンドウのハンドルを指定
             DIGCF_DEVICEINTERFACE |
-            // ClassGuid�Ŏw�肳�ꂽ�C���^�[�t�F�C�X�N���X�ɏ�������C���^�[�t�F�C�X
-            DIGCF_PRESENT                                                        // ���ݑ��݂���f�o�C�X
+            // ClassGuidで指定されたインターフェイスクラスに所属するインターフェイス
+            DIGCF_PRESENT                                                        // 現在存在するデバイス
     );
 
     if (!hDevInfo) {
-        usb->message = " HID�N���X�̃f�o�C�X���X�g�ւ̃n���h�����擾�ł��܂���ł����D";
+        usb->message = " HIDクラスのデバイスリストへのハンドルを取得できませんでした．";
         return 0;
     }
 
@@ -152,7 +151,7 @@ HDEVINFO mySetupDiGetClassDevs(USB *usb, GUID HidGuid) {
 
 
 //////////////////////////////////////////////////////////////////////////////////
-// �Ώۃf�o�C�X����
+// 対象デバイス検索
 
 BOOL SearchDevice(USB *usb, GUID hidGuid, HDEVINFO hDevInfo) {
     DWORD dwIndex;
@@ -166,7 +165,7 @@ BOOL SearchDevice(USB *usb, GUID hidGuid, HDEVINFO hDevInfo) {
     dwIndex = 0;
     while (TRUE) {
         //////////////////////////////////////////////////////////////////////////////
-        // HID�N���X�̃f�o�C�X�̏����擾
+        // HIDクラスのデバイスの情報を取得
 
         memset(&spDid, 0, sizeof(SP_DEVICE_INTERFACE_DATA));
         spDid.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
@@ -181,9 +180,9 @@ BOOL SearchDevice(USB *usb, GUID hidGuid, HDEVINFO hDevInfo) {
 
         if (bRes == TRUE) {
             //////////////////////////////////////////////////////////////////////////////
-            // Windows�����f�B�o�C�X�����擾
+            // Windows内部ディバイス名を取得
 
-            //�f�o�C�X�ڍחp�̒������擾
+            //デバイス詳細用の長さを取得
             dwRequiredLength = 0;
             SetupDiGetDeviceInterfaceDetail(
                     hDevInfo,
@@ -194,11 +193,11 @@ BOOL SearchDevice(USB *usb, GUID hidGuid, HDEVINFO hDevInfo) {
                     NULL
             );
 
-            // �f�o�C�X�ڍחp�������m��
+            // デバイス詳細用メモリ確保
             pspDidd = (PSP_DEVICE_INTERFACE_DETAIL_DATA) malloc(dwRequiredLength);
             pspDidd->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
 
-            //�f�o�C�X�̏ڍׂ��擾
+            //デバイスの詳細を取得
             bRes = SetupDiGetDeviceInterfaceDetail(
                     hDevInfo,
                     &spDid,
@@ -210,7 +209,7 @@ BOOL SearchDevice(USB *usb, GUID hidGuid, HDEVINFO hDevInfo) {
 
             if (bRes == TRUE) {
                 //////////////////////////////////////////////////////////////////////////////
-                // HID�ɃA�N�Z�X����׃t�@�C�����쐬���n���h�����擾
+                // HIDにアクセスする為ファイルを作成しハンドルを取得
 
                 hDevHandle = CreateFile(
                         pspDidd->DevicePath,
@@ -224,7 +223,7 @@ BOOL SearchDevice(USB *usb, GUID hidGuid, HDEVINFO hDevInfo) {
 
                 if (hDevHandle != INVALID_HANDLE_VALUE) {
                     //////////////////////////////////////////////////////////////////////////////
-                    // HID�f�o�C�X�̑������擾
+                    // HIDデバイスの属性を取得
 
                     Attributes.Size = sizeof(Attributes);
                     bRes = HidD_GetAttributes(
@@ -241,11 +240,11 @@ BOOL SearchDevice(USB *usb, GUID hidGuid, HDEVINFO hDevInfo) {
                         }
                     }
 
-                    CloseHandle(hDevHandle);                                    // �n���h�������
+                    CloseHandle(hDevHandle);                                    // ハンドルを閉じる
                 }
             }
 
-            free(pspDidd);                                                        // �f�o�C�X�ڍחp�������m��
+            free(pspDidd);                                                        // デバイス詳細用メモリ確保
             dwIndex++;
         } else {
             if (GetLastError() == ERROR_NO_MORE_ITEMS) {
@@ -254,7 +253,7 @@ BOOL SearchDevice(USB *usb, GUID hidGuid, HDEVINFO hDevInfo) {
         }
     }
 
-    usb->message = "�f�o�C�X�͌�����܂���ł����D";
+    usb->message = "デバイスは見つかりませんでした．";
     SetupDiDestroyDeviceInfoList(hDevInfo);
 
     return FALSE;
@@ -262,7 +261,7 @@ BOOL SearchDevice(USB *usb, GUID hidGuid, HDEVINFO hDevInfo) {
 
 
 //////////////////////////////////////////////////////////////////////////////////
-// HID�f�B�o�C�X�\�͎擾
+// HIDディバイス能力取得
 
 void GetBufferSize(USB *usb) {
 
