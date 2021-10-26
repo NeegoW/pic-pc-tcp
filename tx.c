@@ -75,9 +75,10 @@ PT pt[22] = {
 int main(int argc, char *argv[]) {
     int idx = 0;
     int times = 4;
+    char distance[16];
     switch (argc) {
         case 3:
-            times = atoi(argv[2]);
+            strcpy(distance, argv[2]);
         case 2:
             idx = atoi(argv[1]);
         default:
@@ -114,8 +115,8 @@ int main(int argc, char *argv[]) {
     BOOL bRes;
     char buf[128];
     char fName[128];
-    usb.VendorID = 0x4D8;
-    usb.ProductID = 0xA;
+    usb.VendorID = 0x04D8;
+    usb.ProductID = 0x003F;
 
     bRes = USBConnect(&usb);
     if (bRes == FALSE) {
@@ -160,7 +161,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        log_set_name(fName, "tx", pt[idx].title);
+        log_set_name(fName, pt[idx].title, distance);
         puts(fName);
         log_w(fName, tx.done, tx.doneLen);
 
