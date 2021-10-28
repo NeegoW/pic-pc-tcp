@@ -168,19 +168,26 @@ static void analysis(char *data, int datal, client_list_node_t node_t) {
     //一般情况下这里都是处理“粘包”的地方
 
     //解决粘包之后 将完整的数据发送给数据处理函数
+    //FIXME
     if (strcmp(data, "rx stop") == 0) {
-        if (client_list[2].is_run == 1)
-            send(client_list[2].socket_client, data, datal, 0); //rx
-        if (client_list[0].is_run == 1)
-            send(client_list[0].socket_client, "ack start", strlen("ack start"), 0); //ack
-    } else if (strcmp(data, "ack stop") == 0) {
-        if (client_list[0].is_run == 1)
-            send(client_list[0].socket_client, data, datal, 0); //ack
-    } else {
+        //1->rx
         if (client_list[1].is_run == 1)
-            send(client_list[1].socket_client, data, datal, 0); //tx
+            send(client_list[1].socket_client, data, datal, 0);
+    } else if (strcmp(data, "ack stop") == 0) {
+        //2->ack
         if (client_list[2].is_run == 1)
-            send(client_list[2].socket_client, data, datal, 0); //rx
+            send(client_list[2].socket_client, data, datal, 0);
+    } else if (strncmp(data, "ack start", strlen("ack start")) == 0) {
+        //2->ack
+        if (client_list[2].is_run == 1)
+            send(client_list[2].socket_client, data, datal, 0);
+    } else {
+        //1->rx
+        if (client_list[1].is_run == 1)
+            send(client_list[1].socket_client, data, datal, 0);
+        //0->tx
+        if (client_list[0].is_run == 1)
+            send(client_list[0].socket_client, data, datal, 0);
     }
 }
 
