@@ -95,10 +95,10 @@ int main(int argc, char **argv) {
 static void analysis(char *data, int datal) {
     printf("recv data:%s\tdatal:%d\n", data, datal);
 
-    if (strcmp(data, "stop") != 0) {
-//        if (run_tx(data) == 0) {
-//            send(socket_client, "stop", strlen("stop"), 0);
-//        }
+    if (strcmp(data, "rx stop") != 0 ||
+        strcmp(data, "ack start") != 0 ||
+        strcmp(data, "ack stop") != 0) {
+        //FIXME
         run_tx(data);
     }
 }

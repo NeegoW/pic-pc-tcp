@@ -14,6 +14,7 @@ PROCESS_INFORMATION pi;
 
 int process_is_run = 0;
 int is_connect = 0;
+char param_toAck[64];
 
 static void analysis(char *data, int datal);
 
@@ -88,8 +89,11 @@ static void analysis(char *data, int datal) {
 
     if (strcmp(data, "rx stop") == 0) {
         send_sigint();
-        send(socket_client, "ack start", strlen("ack start"), 0);
+        char toAck[255] = "ack start ";
+        strcat(toAck,param_toAck);
+        send(socket_client, toAck, strlen(toAck), 0);
     } else {
+        strcpy(param_toAck,data);
         run_rx(data);
     }
 }

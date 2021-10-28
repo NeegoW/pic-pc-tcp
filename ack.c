@@ -6,11 +6,6 @@
 // G M K 1 m μ n
 // CPU 16M
 // クロック　分周　　　　　　    カウント
-// 1/16M x 256 = 16us      x 62500 = 1000.0ms   [   1Hz]
-// 1/16M x 256 = 16us      x 31250 =  500.0ms   [   2Hz]
-
-// 1/16M x  64 =  4us      x 62500 =  250.0ms   [   4Hz]
-// 1/16M x  64 =  4us      x 50000 =  200.0ms   [   5Hz]
 // 1/16M x  64 =  4us      x 25000 =  100.0ms   [  10Hz]
 // 1/16M x  64 =  4us      x 12500 =   50.0ms   [  20Hz]
 
@@ -31,6 +26,10 @@
 // 1/16M x   1 =  0.0625us x   320 =     20us   [ 50KHz]
 // 1/16M x   1 =  0.0625us x   160 =     10us   [100KHz]
 // 1/16M x   1 =  0.0625us x    80 =      5us   [200KHz]
+// 1/16M x   1 =  0.0625us x    40 =    2.5us   [400KHz]
+// 1/16M x   1 =  0.0625us x    32 =      2us   [500KHz]
+// 1/16M x   1 =  0.0625us x    16 =      1us   [  1MHz]
+// 1/16M x   1 =  0.0625us x     8 =    0.5us   [  2MHz]
 
 typedef struct {
     char title[64];
@@ -66,22 +65,24 @@ PT pt[22] = {
         "200KHz", 0, 80 - 1,    //21
 };
 
+#include <signal.h>
 #include "log.c"
+#include "dmc_code.c"
 #include "USBconnect.c"
 #include "prbs.c"
-#include "dmc_code.c"
-#include <signal.h>
+
+#define DUMP
+
 
 int stop_flag;
 
-void on_sigint(int);
+void on_sigint(int p_sig);
 
 int main(int argc, char *argv[]) {
     stop_flag = 0;
     signal(SIGINT, on_sigint);
 
     int idx = 0;
-    int times = 4;  //128 * 2 * 4 = 1024
     char distance[16];
     switch (argc) {
         case 3:
@@ -92,40 +93,17 @@ int main(int argc, char *argv[]) {
             break;
     }
 
-    //get random data
-    unsigned char init[7] = {0, 0, 0, 0, 0, 0, 1};
-    unsigned char prbs[128];
-    prbs7(init, prbs);
-
-    //initial DMC
-    unsigned char stx[] = {0, 1, 1, 1, 0, 1, 1, 1};
-    unsigned char etx[] = {1, 1, 1, 0, 1, 1, 1, 0};
-    int stxLen = sizeof(stx) / sizeof(stx[0]);
-    int etxLen = sizeof(etx) / sizeof(etx[0]);
-    int baseLen = 128;
-    long rawLen = baseLen * times;
-    long doneLen = 2 * rawLen + stxLen + etxLen;
-    unsigned char raw[rawLen];
-    unsigned char done[doneLen];
-    for (int i = 0; i < times; i++) {
-        for (int j = 0; j < baseLen; j++) {
-            raw[baseLen * i + j] = prbs[j];
-        }
-    }
-    DMC tx = {stx, etx, raw, done, stxLen, etxLen, rawLen, doneLen};
-    dmc_encode(&tx);
-//    dmc_print(&tx);
-//    exit(1);
-
-    //initial USB
     USB usb;
     BOOL bRes;
     char buf[128];
-    char fName[128] = ".\\tx_log\\";
-    usb.VendorID = 0x04D8;
-    usb.ProductID = 0x003F;
+    int i, j, k = 1, s, m;
+    unsigned char tmp;
+
+    usb.VendorID = 0x4D8;
+    usb.ProductID = 0x3F;
 
     bRes = USBConnect(&usb);
+
     if (bRes == FALSE) {
         printf("error:%s\n", usb.message);
     } else {
@@ -134,52 +112,69 @@ int main(int argc, char *argv[]) {
 
         // Timer Init
         usb.SendBuf[0] = 0x00;
-        sprintf(buf, "I %d,%d", pt[idx].tckps, pt[idx].pr);
-        strcpy(&usb.SendBuf[1], buf);
-        USBWrite(usb);
 
-        // Tx Data Set
-        for (int i = 0; i < doneLen; i++) {
-            sprintf(buf, "D %d,%d", i, tx.done[i]);
-            strcpy(&usb.SendBuf[1], buf);
-            USBWrite(usb);
-        }
-
-        // Tx data number set
-        sprintf(buf, "T %d", doneLen);
-        strcpy(&usb.SendBuf[1], buf);
+        usb.SendBuf[1] = 'I';
         USBWrite(usb);
 
         // Run
         usb.SendBuf[1] = 'R';
         USBWrite(usb);
 
-        int counter;
-        // waiting
-        while (1) {
-            if (stop_flag == 1) break;
-            usb.SendBuf[1] = 'S';
-            USBWrite(usb);
-
-            USBRead(&usb);
-            counter = (usb.RecvBuf[2] << 8) + usb.RecvBuf[3];
-            printf("status: %d\n", counter);
-
-            if (counter >= tx.doneLen) {
-                break;
-            }
-        }
+#ifdef DUMP
+        char fName[128] = ".\\ack_log\\";
 
         log_set_name(fName, pt[idx].title, distance);
         puts(fName);
-        if (counter < tx.doneLen) {
-            tx.done[counter] = '\0';
-            log_w(fName, tx.done, counter);
-        } else {
-            log_w(fName, tx.done, tx.doneLen);
+        FILE *fp;
+        fp = fopen(fName, "w");
+#endif
+        // waiting
+        while (1) {
+            usb.SendBuf[1] = 'G';
+            USBWrite(usb);
+            USBRead(&usb);
+
+            if (stop_flag || usb.RecvBuf[1] == 0x7f) {
+                break;
+            }
+
+            for (i = 1; i <= 64; i++) {
+                tmp = usb.RecvBuf[i];
+                if ((tmp & 0x80) == 0x80) {
+                    for (s = 1; s <= 7; s++) {
+                        m = 0x80 >> s;
+                        if ((tmp & m) == m) {
+#ifdef DUMP
+                            fprintf(fp, "1");
+#else
+                            printf("1");
+#endif
+                        } else {
+#ifdef DUMP
+                            fprintf(fp, "0");
+#else
+                            printf("0");
+#endif
+                        }
+                        if (k % 64 == 0) {
+#ifdef DUMP
+                            fprintf(fp, "\n");
+#else
+                            printf("\n");
+#endif
+                        }
+                        k++;
+                    }
+                }
+            }
         }
+        usb.SendBuf[1] = 'S';
+        USBWrite(usb);
 
         USBDisConnect(usb);
+#ifdef DUMP
+        fclose(fp);
+#endif
     }
     return 0;
 }

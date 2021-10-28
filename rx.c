@@ -37,31 +37,32 @@ typedef struct {
     int pr;
 } PT;
 
+//Ttx * 10 = Trx;
 PT pt[22] = {
-        "10Hz", 2, 25000 - 1,   //0
-        "20Hz", 2, 12500 - 1,   //1
+        "1Hz", 2, 25000 - 1,   //0
+        "2Hz", 2, 12500 - 1,   //1
 
-        "40Hz", 1, 50000 - 1,   //2
-        "50Hz", 1, 40000 - 1,   //3
-        "100Hz", 1, 20000 - 1,  //4
-        "200Hz", 1, 10000 - 1,  //5
-        "400Hz", 1, 5000 - 1,   //6
+        "4Hz", 1, 50000 - 1,   //2
+        "5Hz", 1, 40000 - 1,   //3
+        "10Hz", 1, 20000 - 1,  //4
+        "20Hz", 1, 10000 - 1,  //5
+        "40Hz", 1, 5000 - 1,   //6
 
-        "500Hz", 0, 32000 - 1,  //7
-        "1KHz", 0, 16000 - 1,   //8
-        "2KHz", 0, 8000 - 1,    //9
-        "4KHz", 0, 4000 - 1,    //10
-        "5KHz", 0, 3200 - 1,    //11
-        "10KHz", 0, 1600 - 1,   //12
-        "20KHz", 0, 800 - 1,    //13
-        "40KHz", 0, 400 - 1,    //14
-        "50KHz", 0, 320 - 1,    //15
-        "100KHz", 0, 160 - 1,   //16
-        "200KHz", 0, 80 - 1,    //17
-        "400KHz", 0, 40 - 1,    //18
-        "500KHz", 0, 32 - 1,    //19
-        "1MHz", 0, 16 - 1,    //20
-        "2MHz", 0, 8 - 1,    //21
+        "50Hz", 0, 32000 - 1,  //7
+        "100Hz", 0, 16000 - 1,   //8
+        "200Hz", 0, 8000 - 1,    //9
+        "400Hz", 0, 4000 - 1,    //10
+        "500Hz", 0, 3200 - 1,    //11
+        "1KHz", 0, 1600 - 1,   //12
+        "2KHz", 0, 800 - 1,    //13
+        "4KHz", 0, 400 - 1,    //14
+        "5KHz", 0, 320 - 1,    //15
+        "10KHz", 0, 160 - 1,   //16
+        "20KHz", 0, 80 - 1,    //17
+        "40KHz", 0, 40 - 1,    //18
+        "50KHz", 0, 32 - 1,    //19
+        "100KHz", 0, 16 - 1,    //20
+        "200KHz", 0, 8 - 1,    //21
 };
 
 #include <signal.h>
@@ -80,6 +81,17 @@ void on_sigint(int p_sig);
 int main(int argc, char *argv[]) {
     stop_flag = 0;
     signal(SIGINT, on_sigint);
+
+    int idx = 0;
+    char distance[16];
+    switch (argc) {
+        case 3:
+            strcpy(distance, argv[2]);
+        case 2:
+            idx = atoi(argv[1]);
+        default:
+            break;
+    }
 
     USB usb;
     BOOL bRes;
@@ -101,7 +113,7 @@ int main(int argc, char *argv[]) {
         // Timer Init
         usb.SendBuf[0] = 0x00;
 #ifdef DUMP
-        sprintf(buf, "I %d,%d", 0, 319);
+        sprintf(buf, "I %d,%d", pt[idx].tckps, pt[idx].pr);
 #else
         sprintf(buf, "I %d,%d", 1, 20000 - 1);
 #endif
@@ -114,10 +126,8 @@ int main(int argc, char *argv[]) {
 
 #ifdef DUMP
         char fName[128] = ".\\rx_log\\";
-        PT freq = pt[0];
 
-        if (argc > 1) freq = pt[atoi(argv[1])];
-        log_set_name(fName, "rx", freq.title);
+        log_set_name(fName, pt[idx].title, distance);
         puts(fName);
         FILE *fp;
         fp = fopen(fName, "w");
@@ -163,6 +173,17 @@ int main(int argc, char *argv[]) {
             }
         }
         usb.SendBuf[1] = 'S';
+        USBWrite(usb);
+
+        //ACK DATA SET
+        unsigned char ack[] = {1, 1, 0, 1, 0, 0, 1, 0};
+        for (j = 0; j < 8; ++j) {
+            sprintf(buf, "A %d,%d", j, ack[j]);
+            strcpy(&usb.SendBuf[1], buf);
+            USBWrite(usb);
+        }
+
+        usb.SendBuf[1] = 'C';
         USBWrite(usb);
 
         USBDisConnect(usb);

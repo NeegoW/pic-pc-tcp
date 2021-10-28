@@ -25,6 +25,8 @@ int run_ack(char *param);
 
 void send_sigint();
 
+int split(char dst[][8], char *str, const char *spl);
+
 int main(int argc, char **argv) {
     char host_addr[16];
 
@@ -86,9 +88,14 @@ int main(int argc, char **argv) {
 static void analysis(char *data, int datal) {
     printf("recv data:%s\tdatal:%d\n", data, datal);
 
-    if (strcmp(data, "stop") == 0) {
+    if (strcmp(data, "ack stop") == 0) {
         send_sigint();
-    } else {
+    } else if(strncmp(data, "ack start", strlen("ack start")) == 0){
+        char tmp[255];
+        strcpy(tmp, data);
+        char dst[4][8];
+        split(dst, tmp, " ");
+        sprintf(data, "%s %s", dst[2], dst[3]);
         run_ack(data);
     }
 }
@@ -121,7 +128,7 @@ DWORD WINAPI rec_thread() {
 }
 
 int run_ack(char *param) {
-    char cmdLine[256] = "rx.exe ";
+    char cmdLine[256] = "ack.exe ";
     strcat(cmdLine, param);
 
     // Start the child process.
@@ -160,4 +167,16 @@ void send_sigint() {
     SetConsoleCtrlHandler(NULL, FALSE);
 
     process_is_run = 0;
+}
+
+int split(char dst[][8], char *str, const char *spl) {
+    int n = 0;
+    char *tmp = str;
+    char *result = NULL;
+    result = strtok(tmp, spl);
+    while (result != NULL) {
+        strcpy(dst[n++], result);
+        result = strtok(NULL, spl);
+    }
+    return n;
 }
