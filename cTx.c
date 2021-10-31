@@ -150,6 +150,7 @@ DWORD WINAPI send_thread() {
                 loop = atoi(dst[2]);
             }
 
+            sprintf(sendData,"%s %s",dst[0],dst[1]);
             while (loop--) {
                 process_is_run = 1;
                 send(socket_client, sendData, strlen(sendData), 0);
@@ -195,7 +196,7 @@ int run_tx(char *param) {
     si.cb = sizeof(si);
     memset(&pi, 0, sizeof(PROCESS_INFORMATION));
 
-    send(socket_client, "rx stop", strlen("stop"), 0);
+    send(socket_client, "rx stop", strlen("rx stop"), 0);
 
     process_is_run = 0;
     return 0;
