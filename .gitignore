@@ -1,0 +1,11 @@
+﻿/tmp/
+
+/.gradle/
+
+/cmake-build-debug/
+
+/.idea/
+
+/CMakeLists.txt
+
+/test1.c
