@@ -38,7 +38,7 @@ typedef struct {
 } PT;
 
 //Ttx * 10 = Trx;
-PT pt[22] = {
+PT pt[] = {
         "1Hz", 2, 25000 - 1,   //0
         "2Hz", 2, 12500 - 1,   //1
 
@@ -71,7 +71,7 @@ PT pt[22] = {
 #include "USBconnect.c"
 #include "prbs.c"
 
-#define DUMP
+//#define DUMP
 
 
 int stop_flag;
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
 #ifdef DUMP
         sprintf(buf, "I %d,%d", pt[idx].tckps, pt[idx].pr);
 #else
-        sprintf(buf, "I %d,%d", 1, 20000 - 1);
+        sprintf(buf, "I %d,%d", pt[idx].tckps, pt[idx].pr);
 #endif
         strcpy(&usb.SendBuf[1], buf);
         USBWrite(usb);
