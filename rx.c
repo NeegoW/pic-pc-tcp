@@ -71,7 +71,7 @@ PT pt[] = {
 #include "USBconnect.c"
 #include "prbs.c"
 
-#define DUMP
+//#define DUMP
 
 int stop_flag;
 
@@ -96,7 +96,6 @@ int main(int argc, char *argv[]) {
     BOOL bRes;
     char buf[128];
     int j, k = 1;
-    unsigned char tmp;
 
     usb.VendorID = 0x4D8;
     usb.ProductID = 0x3F;
@@ -123,6 +122,7 @@ int main(int argc, char *argv[]) {
         usb.SendBuf[1] = 'R';
         USBWrite(usb);
         int h;
+        unsigned char tmp;
 
 #ifdef DUMP
         char fName[128] = ".\\rx_log\\";
