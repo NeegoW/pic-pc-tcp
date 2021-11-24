@@ -72,7 +72,7 @@ PT pt[22] = {
 #include "dmc_code.c"
 #include <signal.h>
 
-#define DUMP
+//#define DUMP
 
 int stop_flag = 0;
 
