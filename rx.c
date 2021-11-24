@@ -73,12 +73,11 @@ PT pt[] = {
 
 //#define DUMP
 
-int stop_flag;
+int stop_flag = 0;
 
 void on_sigint(int p_sig);
 
 int main(int argc, char *argv[]) {
-    stop_flag = 0;
     signal(SIGINT, on_sigint);
 
     int idx = 0;
