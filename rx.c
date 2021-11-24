@@ -143,8 +143,8 @@ int main(int argc, char *argv[]) {
             }
 
             h = usb.RecvBuf[1];
-            tmp = usb.RecvBuf[2];
             if (h == 0x80) {
+                tmp = usb.RecvBuf[2];
 #ifdef DUMP
                 fprintf(fp, "%d", tmp);
 #else
