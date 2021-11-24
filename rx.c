@@ -71,8 +71,7 @@ PT pt[] = {
 #include "USBconnect.c"
 #include "prbs.c"
 
-//#define DUMP
-
+#define DUMP
 
 int stop_flag;
 
@@ -83,7 +82,7 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, on_sigint);
 
     int idx = 0;
-    char distance[16];
+    char distance[16] = "test";
     switch (argc) {
         case 3:
             strcpy(distance, argv[2]);
@@ -96,7 +95,7 @@ int main(int argc, char *argv[]) {
     USB usb;
     BOOL bRes;
     char buf[128];
-    int i, j, k = 1;
+    int j, k = 1;
     unsigned char tmp;
 
     usb.VendorID = 0x4D8;
@@ -123,6 +122,7 @@ int main(int argc, char *argv[]) {
         // Run
         usb.SendBuf[1] = 'R';
         USBWrite(usb);
+        int h;
 
 #ifdef DUMP
         char fName[128] = ".\\rx_log\\";
@@ -142,13 +142,13 @@ int main(int argc, char *argv[]) {
                 break;
             }
 
-            tmp = usb.RecvBuf[1];
-            if ((tmp & 0x80) == 0x80) {
-                int x = tmp & 0x1;
+            h = usb.RecvBuf[1];
+            tmp = usb.RecvBuf[2];
+            if (h == 0x80) {
 #ifdef DUMP
-                fprintf(fp, tmp);
+                fprintf(fp, "%d", tmp);
 #else
-                printf("%d", x);
+                printf("%d", tmp);
 #endif
                 if (k++ % 64 == 0) {
 #ifdef DUMP
