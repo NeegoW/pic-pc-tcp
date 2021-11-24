@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
     USB usb;
     BOOL bRes;
     char buf[128];
-    int i, j, k = 1, s, m;
+    int i, j, k = 1;
     unsigned char tmp;
 
     usb.VendorID = 0x4D8;
@@ -142,33 +142,20 @@ int main(int argc, char *argv[]) {
                 break;
             }
 
-            for (i = 1; i <= 64; i++) {
-                tmp = usb.RecvBuf[i];
-                if ((tmp & 0x80) == 0x80) {
-                    for (s = 1; s <= 7; s++) {
-                        m = 0x80 >> s;
-                        if ((tmp & m) == m) {
+            tmp = usb.RecvBuf[1];
+            if ((tmp & 0x80) == 0x80) {
+                int x = tmp & 0x1;
 #ifdef DUMP
-                            fprintf(fp, "1");
+                fprintf(fp, tmp);
 #else
-                            printf("1");
+                printf("%d", x);
 #endif
-                        } else {
+                if (k++ % 64 == 0) {
 #ifdef DUMP
-                            fprintf(fp, "0");
+                    fprintf(fp, "\n");
 #else
-                            printf("0");
+                    printf("\n");
 #endif
-                        }
-                        if (k % 64 == 0) {
-#ifdef DUMP
-                            fprintf(fp, "\n");
-#else
-                            printf("\n");
-#endif
-                        }
-                        k++;
-                    }
                 }
             }
         }
