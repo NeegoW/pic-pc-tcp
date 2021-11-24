@@ -72,17 +72,18 @@ PT pt[22] = {
 #include "dmc_code.c"
 #include <signal.h>
 
-int stop_flag;
+#define DUMP
 
-void on_sigint(int);
+int stop_flag = 0;
+
+void on_sigint(int p_sig);
 
 int main(int argc, char *argv[]) {
-    stop_flag = 0;
     signal(SIGINT, on_sigint);
 
     int idx = 0;
     int times = 4;  //128 * 2 * 4 = 1024
-    char distance[16];
+    char distance[16] = "test";
     switch (argc) {
         case 3:
             strcpy(distance, argv[2]);
@@ -121,7 +122,7 @@ int main(int argc, char *argv[]) {
     USB usb;
     BOOL bRes;
     char buf[128];
-    char fName[128] = ".\\tx_log\\";
+
     usb.VendorID = 0x04D8;
     usb.ProductID = 0x003F;
 
@@ -153,33 +154,60 @@ int main(int argc, char *argv[]) {
         // Run
         usb.SendBuf[1] = 'R';
         USBWrite(usb);
+        int h, k = 1, counter = 0;
+        unsigned char tmp1, tmp2, x1, x2, x3;
 
-        int counter;
+#ifdef DUMP
+        char fName_tx[128] = ".\\tx_log\\";
+        char fName_ack[128] = ".\\ack_log\\";
+
+        log_set_name(fName_tx, pt[idx].title, distance);
+        log_set_name(fName_ack, pt[idx].title, distance);
+        puts(fName_tx);
+        puts(fName_ack);
+        FILE *fp1, *fp2;
+        fp1 = fopen(fName_tx, "w");
+        fp2 = fopen(fName_ack, "w");
+#endif
         // waiting
         while (1) {
-            if (stop_flag == 1) break;
-            usb.SendBuf[1] = 'S';
+            usb.SendBuf[1] = 'G';
             USBWrite(usb);
-
             USBRead(&usb);
-            counter = (usb.RecvBuf[2] << 8) + usb.RecvBuf[3];
-            printf("status: %d\n", counter);
 
-            if (counter >= tx.doneLen) {
+            h = usb.RecvBuf[1];
+            if (h == 0x80) {
+                tmp1 = usb.RecvBuf[2];
+                tmp2 = usb.RecvBuf[3];
+                counter = (usb.RecvBuf[4] << 8) + usb.RecvBuf[5];
+#ifdef DUMP
+                fprintf(fp1, "%d", tmp1);
+                fprintf(fp2, "%d", tmp2);
+#else
+                printf("%d,%d,%d\n", counter, tmp1, tmp2);
+#endif
+                if (k++ % 64 == 0) {
+#ifdef DUMP
+                    fprintf(fp1, "\n");
+                    fprintf(fp2, "\n");
+#else
+                    printf("\n");
+#endif
+                }
+            }
+
+            if (counter + 1 >= tx.doneLen || stop_flag == 1) {
+                usb.SendBuf[1] = 'S';
+                USBWrite(usb);
                 break;
             }
         }
 
-        log_set_name(fName, pt[idx].title, distance);
-        puts(fName);
-        if (counter < tx.doneLen) {
-            tx.done[counter] = '\0';
-            log_w(fName, tx.done, counter);
-        } else {
-            log_w(fName, tx.done, tx.doneLen);
-        }
-
         USBDisConnect(usb);
+#ifdef DUMP
+        fclose(fp1);
+        fclose(fp2);
+#endif
     }
     return 0;
 }
