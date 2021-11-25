@@ -6,6 +6,7 @@
 #pragma comment(lib, "ws2_32.lib")
 
 #define DEF_PORT 10086
+#define DECREASE
 
 static SOCKET socket_client;         //本地创建的客户端socket
 static struct sockaddr_in server_in; //用于存储服务器的基本信息
@@ -150,13 +151,22 @@ DWORD WINAPI send_thread() {
                 loop = atoi(dst[2]);
             }
 
-            sprintf(sendData,"%s %s",dst[0],dst[1]);
-            while (loop--) {
-                process_is_run = 1;
-                send(socket_client, sendData, strlen(sendData), 0);
-                while (process_is_run == 1);
-                Sleep(1000);
+            int f = atoi(dst[0]);
+#ifdef DECREASE
+            while (f >= 0) {
+                sprintf(sendData, "%d %s", f--, dst[1]);
+#else
+                sprintf(sendData, "%d %s", f, dst[1]);
+#endif
+                while (loop--) {
+                    process_is_run = 1;
+                    send(socket_client, sendData, strlen(sendData), 0);
+                    while (process_is_run == 1);
+                    Sleep(1000);
+                }
+#ifdef DECREASE
             }
+#endif
         }
     } while (is_connect != 0);
 
