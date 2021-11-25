@@ -72,7 +72,7 @@ PT pt[22] = {
 #include "dmc_code.c"
 #include <signal.h>
 
-//#define DUMP
+#define DUMP
 
 int stop_flag = 0;
 
@@ -82,7 +82,6 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, on_sigint);
 
     int idx = 0;
-    int times = 4;  //128 * 2 * 4 = 1024
     char distance[16] = "test";
     switch (argc) {
         case 3:
@@ -94,28 +93,25 @@ int main(int argc, char *argv[]) {
     }
 
     //get random data
-    unsigned char init[7] = {0, 0, 0, 0, 0, 0, 1};
-    unsigned char prbs[128];
-    prbs7(init, prbs);
-
-    //initial DMC
-    unsigned char stx[] = {0, 1, 1, 1, 0, 1, 1, 1};
-    unsigned char etx[] = {1, 1, 1, 0, 1, 1, 1, 0};
-    int stxLen = sizeof(stx) / sizeof(stx[0]);
-    int etxLen = sizeof(etx) / sizeof(etx[0]);
-    int baseLen = 128;
-    long rawLen = baseLen * times;
-    long doneLen = 2 * rawLen + stxLen + etxLen;
-    unsigned char raw[rawLen];
-    unsigned char done[doneLen];
+    unsigned char init[] = {1, 0, 1, 0, 1, 1, 0, 0};
+    int len = sizeof(init);
+    int t_len = 1040;
+    unsigned char tx[t_len];
+    memset(tx, 0, t_len);
+    int times = t_len / len;  //BUFSIZE = 1040
     for (int i = 0; i < times; i++) {
-        for (int j = 0; j < baseLen; j++) {
-            raw[baseLen * i + j] = prbs[j];
+        for (int j = 0; j < len; j++) {
+            tx[len * i + j] = init[j];
         }
     }
-    DMC tx = {stx, etx, raw, done, stxLen, etxLen, rawLen, doneLen};
-    dmc_encode(&tx);
-//    dmc_print(&tx);
+
+//    int a = 0;
+//    for (int i = 0; i < t_len; ++i) {
+//        printf("%d", tx[i]);
+//        if (++a % 8 == 0) {
+//            printf("   %d\n", a / 8);
+//        }
+//    }
 //    exit(1);
 
     //initial USB
@@ -140,14 +136,14 @@ int main(int argc, char *argv[]) {
         USBWrite(usb);
 
         // Tx Data Set
-        for (int i = 0; i < doneLen; i++) {
-            sprintf(buf, "D %d,%d", i, tx.done[i]);
+        for (int i = 0; i < t_len; i++) {
+            sprintf(buf, "D %d,%d", i, tx[i]);
             strcpy(&usb.SendBuf[1], buf);
             USBWrite(usb);
         }
 
         // Tx data number set
-        sprintf(buf, "T %d", doneLen);
+        sprintf(buf, "T %d", t_len);
         strcpy(&usb.SendBuf[1], buf);
         USBWrite(usb);
 
@@ -196,7 +192,7 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            if (counter + 1 >= tx.doneLen || stop_flag == 1) {
+            if (counter + 1 >= t_len || stop_flag == 1) {
                 usb.SendBuf[1] = 'S';
                 USBWrite(usb);
                 break;
