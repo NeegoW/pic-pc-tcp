@@ -6,7 +6,6 @@
 #pragma comment(lib, "ws2_32.lib")
 
 #define DEF_PORT 10086
-#define DECREASE
 
 static SOCKET socket_client;         //本地创建的客户端socket
 static struct sockaddr_in server_in; //用于存储服务器的基本信息
@@ -15,7 +14,6 @@ STARTUPINFO si;
 PROCESS_INFORMATION pi;
 int process_is_run = 0;
 int is_connect = 0;
-int loop;
 
 static void analysis(char *data, int datal);
 
@@ -25,7 +23,7 @@ DWORD WINAPI send_thread();
 
 int run_tx(char *param);
 
-int split(char dst[][8], char *str, const char *spl);
+int split(char dst[][16], char *str, const char *spl);
 
 int main(int argc, char **argv) {
     char host_addr[16];
@@ -132,41 +130,27 @@ DWORD WINAPI rec_thread() {
 }
 
 DWORD WINAPI send_thread() {
-    char sendData[255];
+    char sendData[64];
     do {
         if (process_is_run == 0) {
             system("pause");
-            puts("key to input:[freq] [distance] [-loop]");
+            puts("key to input:[freq] [distance] [loop]");
+            puts("0->1hz, 1->10hz, 2->100hz, 3->1khz, 4->10khz, 5->100khz");
             gets(sendData);
             char tmp[255];
             strcpy(tmp, sendData);
-            char dst[4][8];
+            char dst[4][16];
             int c = split(dst, tmp, " ");
-            if (c < 2) {
+            if (c < 3) {
                 puts("plz enter args");
                 continue;
-            } else if (c == 2) {
-                loop = 1;
-            } else if (c >= 3) {
-                loop = atoi(dst[2]);
             }
 
-            int f = atoi(dst[0]);
-#ifdef DECREASE
-            while (f >= 0) {
-                sprintf(sendData, "%d %s", f--, dst[1]);
-#else
-                sprintf(sendData, "%d %s", f, dst[1]);
-#endif
-                while (loop--) {
-                    process_is_run = 1;
-                    send(socket_client, sendData, strlen(sendData), 0);
-                    while (process_is_run == 1);
-                    Sleep(1000);
-                }
-#ifdef DECREASE
-            }
-#endif
+            process_is_run = 1;
+            send(socket_client, sendData, strlen(sendData), 0);
+            while (process_is_run == 1);
+            Sleep(1000);
+
         }
     } while (is_connect != 0);
 
@@ -212,7 +196,7 @@ int run_tx(char *param) {
     return 0;
 }
 
-int split(char dst[][8], char *str, const char *spl) {
+int split(char dst[][16], char *str, const char *spl) {
     int n = 0;
     char *tmp = str;
     char *result = NULL;

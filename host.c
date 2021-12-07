@@ -33,11 +33,8 @@ DWORD WINAPI myfun1(LPVOID lpParameter);
 int main(int argc, char *argv[]) {
     char tx_addr[16];
     char rx_addr[16];
-    char ack_addr[16];
 
     switch (argc) {
-        case 4:
-            strcpy(ack_addr, argv[3]);
         case 3:
             strcpy(rx_addr, argv[2]);
         case 2:
@@ -109,7 +106,6 @@ int main(int argc, char *argv[]) {
                 int j;
                 if (strcmp(inet_ntoa(c_sin.sin_addr), tx_addr) == 0) j = 0;
                 else if (strcmp(inet_ntoa(c_sin.sin_addr), rx_addr) == 0) j = 1;
-                else if (strcmp(inet_ntoa(c_sin.sin_addr), ack_addr) == 0) j = 2;
                 else {
                     char *msg = "disconnected due to wrong addr\n";
                     send(socket_of_client, msg, strlen(msg), 0);
@@ -137,20 +133,6 @@ int main(int argc, char *argv[]) {
                             NULL);
                     client_nums++;
                 }
-                /*else {
-                    j += 2;
-                }
-
-                if (j >= MAX_CLIENT_NUMS) {
-                    char *msg = "disconnected due to limit connects\n";
-                    send(socket_of_client, msg, strlen(msg), 0);
-                    printf("new request from IP：%s%d,disconnected due to limit connects\n",
-                           inet_ntoa(c_sin.sin_addr),
-                           c_sin.sin_port);
-                    Sleep(1000);
-                    closesocket(socket_of_client);
-                    continue;
-                }*/
             }
         }
     }

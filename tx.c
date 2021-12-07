@@ -38,32 +38,13 @@ typedef struct {
     int pr;
 } PT;
 
-PT pt[22] = {
-        "1Hz", 3, 62500 - 1,    //0
-        "2Hz", 3, 31250 - 1,    //1
-
-        "4Hz", 2, 62500 - 1,    //2
-        "5Hz", 2, 50000 - 1,    //3
-        "10Hz", 2, 25000 - 1,   //4
-        "20Hz", 2, 12500 - 1,   //5
-
-        "40Hz", 1, 50000 - 1,   //6
-        "50Hz", 1, 40000 - 1,   //7
-        "100Hz", 1, 20000 - 1,  //8
-        "200Hz", 1, 10000 - 1,  //9
-        "400Hz", 1, 5000 - 1,   //10
-
-        "500Hz", 0, 32000 - 1,  //11
-        "1KHz", 0, 16000 - 1,   //12
-        "2KHz", 0, 8000 - 1,    //13
-        "4KHz", 0, 4000 - 1,    //14
-        "5KHz", 0, 3200 - 1,    //15
-        "10KHz", 0, 1600 - 1,   //16
-        "20KHz", 0, 800 - 1,    //17
-        "40KHz", 0, 400 - 1,    //18
-        "50KHz", 0, 320 - 1,    //19
-        "100KHz", 0, 160 - 1,   //20
-        "200KHz", 0, 80 - 1,    //21
+PT pt[] = {
+        "1Hz", 2, 62500 - 1,    //0
+        "10Hz", 1, 50000 - 1,   //1
+        "100Hz", 1, 5000 - 1,   //2
+        "1KHz", 0, 4000 - 1,    //3
+        "10KHz", 0, 400 - 1,    //4
+        "100KHz", 0, 40 - 1,    //5
 };
 
 #include "log.c"
@@ -82,9 +63,12 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, on_sigint);
 
     int idx = 0;
-    int times = 4;  //128 * 2 * 4 = 1024
+    int times = 4;  //128 * 4 * 2 = 1024
     char distance[16] = "test";
+    int loop = 1;
     switch (argc) {
+        case 4:
+            loop = atoi(argv[3]);
         case 3:
             strcpy(distance, argv[2]);
         case 2:
@@ -99,13 +83,13 @@ int main(int argc, char *argv[]) {
     prbs7(init, prbs);
 
     //initial DMC
-    unsigned char stx[] = {0, 1, 1, 1, 0, 1, 1, 1};
-    unsigned char etx[] = {1, 1, 1, 0, 1, 1, 1, 0};
+    unsigned char stx[] = {1, 1, 1, 0, 1, 1, 1, 0};
+    unsigned char etx[] = {0, 1, 1, 1, 0, 1, 1, 1};
     int stxLen = sizeof(stx) / sizeof(stx[0]);
     int etxLen = sizeof(etx) / sizeof(etx[0]);
     int baseLen = 128;
-    long rawLen = baseLen * times;
-    long doneLen = 2 * rawLen + stxLen + etxLen;
+    int rawLen = baseLen * times;
+    int doneLen = 2 * rawLen + stxLen + etxLen;
     unsigned char raw[rawLen];
     unsigned char done[doneLen];
     for (int i = 0; i < times; i++) {
@@ -133,30 +117,6 @@ int main(int argc, char *argv[]) {
         printf("start\n");
         USBmemset(&usb);
 
-        // Timer Init
-        usb.SendBuf[0] = 0x00;
-        sprintf(buf, "I %d,%d", pt[idx].tckps, pt[idx].pr);
-        strcpy(&usb.SendBuf[1], buf);
-        USBWrite(usb);
-
-        // Tx Data Set
-        for (int i = 0; i < doneLen; i++) {
-            sprintf(buf, "D %d,%d", i, tx.done[i]);
-            strcpy(&usb.SendBuf[1], buf);
-            USBWrite(usb);
-        }
-
-        // Tx data number set
-        sprintf(buf, "T %d", doneLen);
-        strcpy(&usb.SendBuf[1], buf);
-        USBWrite(usb);
-
-        // Run
-        usb.SendBuf[1] = 'R';
-        USBWrite(usb);
-        int h, k = 1, counter = 0;
-        unsigned char tmp1, tmp2;
-
 #ifdef DUMP
         char fName_tx[128] = ".\\tx_log\\";
         char fName_ack[128] = ".\\ack_log\\";
@@ -169,6 +129,36 @@ int main(int argc, char *argv[]) {
         fp1 = fopen(fName_tx, "w");
         fp2 = fopen(fName_ack, "w");
 #endif
+
+        // Timer Init
+        usb.SendBuf[0] = 0x00;
+        sprintf(buf, "I %d,%d", pt[idx].tckps, pt[idx].pr);
+        strcpy(&usb.SendBuf[1], buf);
+        USBWrite(usb);
+
+        // Tx data number set
+        sprintf(buf, "T %d", doneLen);
+        strcpy(&usb.SendBuf[1], buf);
+        USBWrite(usb);
+
+        // Tx data loop set
+        sprintf(buf, "L %d", loop);
+        strcpy(&usb.SendBuf[1], buf);
+        USBWrite(usb);
+
+        // Tx Data Set
+        for (int i = 0; i < doneLen; i++) {
+            sprintf(buf, "D %d,%d", i, tx.done[i]);
+            strcpy(&usb.SendBuf[1], buf);
+            USBWrite(usb);
+        }
+
+        // Run
+        usb.SendBuf[1] = 'R';
+        USBWrite(usb);
+        int h, k = 1, data_idx, cd;
+        unsigned char tmp1, tmp2;
+
         // waiting
         while (1) {
             usb.SendBuf[1] = 'G';
@@ -179,27 +169,21 @@ int main(int argc, char *argv[]) {
             if (h == 0x80) {
                 tmp1 = usb.RecvBuf[2];
                 tmp2 = usb.RecvBuf[3];
-                counter = (usb.RecvBuf[4] << 8) + usb.RecvBuf[5];
+                data_idx = (usb.RecvBuf[4] << 8) + usb.RecvBuf[5];
+                cd = (usb.RecvBuf[6] << 8) + usb.RecvBuf[7];
+                if (cd <= 0 || stop_flag == 1) {
+                    break;
+                }
 #ifdef DUMP
                 fprintf(fp1, "%d", tmp1);
                 fprintf(fp2, "%d", tmp2);
-#else
-                printf("%d,%d,%d\n", counter, tmp1, tmp2);
-#endif
-                if (k++ % 64 == 0) {
-#ifdef DUMP
+                if (k++ % doneLen == 0) {
                     fprintf(fp1, "\n");
                     fprintf(fp2, "\n");
-#else
-                    printf("\n");
-#endif
                 }
-            }
-
-            if (counter + 1 >= tx.doneLen || stop_flag == 1) {
-                usb.SendBuf[1] = 'S';
-                USBWrite(usb);
-                break;
+#else
+                printf("cd: %d, data_idx: %d, s: %d, a: %d\n", cd, data_idx, tmp1, tmp2);
+#endif
             }
         }
 
