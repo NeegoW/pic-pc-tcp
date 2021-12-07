@@ -155,14 +155,6 @@ static void analysis(char *data, int datal, client_list_node_t node_t) {
         //1->rx
         if (client_list[1].is_run == 1)
             send(client_list[1].socket_client, data, datal, 0);
-    } else if (strcmp(data, "ack stop") == 0) {
-        //2->ack
-        if (client_list[2].is_run == 1)
-            send(client_list[2].socket_client, data, datal, 0);
-    } else if (strncmp(data, "ack start", strlen("ack start")) == 0) {
-        //2->ack
-        if (client_list[2].is_run == 1)
-            send(client_list[2].socket_client, data, datal, 0);
     } else {
         //1->rx
         if (client_list[1].is_run == 1)
