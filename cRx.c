@@ -89,7 +89,7 @@ static void analysis(char *data, int datal) {
 
     if (strcmp(data, "rx stop") == 0) {
         send_sigint();
-        char toAck[255] = "ack start ";
+        char toAck[255] = "ack start";
         strcat(toAck,param_toAck);
         send(socket_client, toAck, strlen(toAck), 0);
     } else {
