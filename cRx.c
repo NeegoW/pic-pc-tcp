@@ -21,11 +21,14 @@ DWORD WINAPI rec_thread();
 
 DWORD WINAPI send_thread();
 
+BOOL WINAPI CtrlHandler(DWORD fdwCtrlType);
+
 int run_rx(char *param);
 
 void send_sigint();
 
 int main(int argc, char **argv) {
+    SetConsoleCtrlHandler(CtrlHandler, TRUE);
     char host_addr[16];
 
     switch (argc) {
@@ -146,18 +149,25 @@ int run_rx(char *param) {
     return 0;
 }
 
+BOOL WINAPI CtrlHandler(DWORD fdwCtrlType) {
+    switch (fdwCtrlType) {
+        // Handle the CTRL-C signal.
+        case CTRL_C_EVENT:
+            puts("quit in ctrl+break");
+            return TRUE;
+
+            // Pass other signals to the next handler.
+        case CTRL_BREAK_EVENT:
+            return FALSE;
+
+        default:
+            return FALSE;
+    }
+}
+
 void send_sigint() {
     AttachConsole(pi.dwProcessId);
-    SetConsoleCtrlHandler(NULL, TRUE);
-
-    if (GenerateConsoleCtrlEvent(CTRL_C_EVENT, pi.dwProcessId)) {
-        memset(&si, 0, sizeof(STARTUPINFO));
-        si.cb = sizeof(si);
-        memset(&pi, 0, sizeof(PROCESS_INFORMATION));
-    }
-
-    Sleep(500);
-    SetConsoleCtrlHandler(NULL, FALSE);
+    GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0);
 
     process_is_run = 0;
 }
